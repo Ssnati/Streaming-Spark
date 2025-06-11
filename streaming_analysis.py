@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
+from pyspark.sql.utils import AnalysisException
 import time
 import os
 
@@ -73,41 +74,52 @@ def process_batch(df, epoch_id):
     
     print(f"\nEsperando nuevos datos...")
 
+def infer_schema(spark, input_path):
+    """Infers schema from the first CSV file in the input directory."""
+    try:
+        # Read a sample of the first CSV file
+        sample_df = spark.read \
+            .option("header", "true") \
+            .option("inferSchema", "true") \
+            .csv(input_path) \
+            .limit(1)
+            
+        if sample_df.rdd.isEmpty():
+            raise ValueError(f"No se encontraron archivos CSV en {os.path.abspath(input_path)}")
+            
+        return sample_df.schema
+        
+    except AnalysisException as e:
+        raise ValueError(f"Error al inferir el esquema: {str(e)}")
+
 def main():
     # Configuración de rutas
     input_path = "files/csv"
     checkpoint_path = "checkpoints/streaming_analysis"
     
-    # Asegurarse de que exista el directorio de checkpoints
+    # Asegurarse de que existan los directorios necesarios
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+    os.makedirs(input_path, exist_ok=True)
     
     # Iniciar sesión de Spark
     spark = create_spark_session()
     
     try:
-            # Configurar el stream
-        print("Iniciando el análisis en tiempo real...")
+        # Inferir el esquema del primer archivo CSV
+        print("Inferiendo esquema del primer archivo CSV...")
+        schema = infer_schema(spark, input_path)
+        
+        # Mostrar el esquema inferido
+        print("\nEsquema inferido:")
+        for field in schema.fields:
+            print(f"- {field.name}: {field.dataType}")
+        
+        # Configurar el stream
+        print("\nIniciando el análisis en tiempo real...")
         print(f"Monitoreando la carpeta: {os.path.abspath(input_path)}")
         print("Presiona Ctrl+C para detener\n")
         
-        # Leer el primer archivo CSV para inferir el esquema
-        print("Iniciando inferencia del esquema...")
-        
-        # Leer el directorio completo como un dataset
-        static_df = spark.read \
-            .option("header", "true") \
-            .option("inferSchema", "true") \
-            .csv(input_path) \
-            .limit(1)  # Solo necesitamos una fila para inferir el esquema
-            
-        if static_df.rdd.isEmpty():
-            raise ValueError(f"No se encontraron archivos CSV en {input_path}")
-            
-        # Obtener el esquema inferido
-        schema = static_df.schema
-        print("Esquema inferido exitosamente")
-            
-        # Configurar el stream con el esquema inferido
+        # Crear el streaming DataFrame con el esquema inferido
         streaming_df = spark.readStream \
             .schema(schema) \
             .option("header", "true") \
@@ -128,11 +140,18 @@ def main():
         if 'query' in locals():
             query.stop()
     except Exception as e:
-        print(f"Error durante la ejecución: {str(e)}")
+        print(f"\nError durante la ejecución: {str(e)}")
+        print("Asegúrate de que hay archivos CSV en el directorio y que tienen el formato correcto.")
+        print(f"Directorio actual: {os.path.abspath(input_path)}")
+        print("\nPosibles soluciones:")
+        print("1. Verifica que el directorio 'files/csv' existe y contiene archivos CSV")
+        print("2. Asegúrate de que los archivos CSV tienen encabezados en la primera fila")
+        print("3. Comprueba que tienes permisos de lectura en el directorio")
         raise
     finally:
-        spark.stop()
-        print("Análisis detenido.")
+        if 'spark' in locals():
+            spark.stop()
+            print("Análisis detenido.")
 
 if __name__ == "__main__":
     main()
