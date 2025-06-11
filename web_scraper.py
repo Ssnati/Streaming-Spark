@@ -5,6 +5,8 @@ import time
 import re
 import os
 
+base_url = "https://www.fincaraiz.com.co/venta/casas/tunja/boyaca"
+
 def scrape_listings(page_url):
     """
     Extrae título, precio y ubicación de las propiedades en una página.
@@ -13,15 +15,15 @@ def scrape_listings(page_url):
     resp = requests.get(page_url)
     resp.raise_for_status()
     
-    # Crear carpeta data si no existe
-    os.makedirs('data', exist_ok=True)
+    # Crear carpeta scrapped_data si no existe
+    os.makedirs('scrapped_data', exist_ok=True)
     
-    # Guardar el HTML en un archivo local dentro de la carpeta data
+    # Guardar el HTML en un archivo local dentro de la carpeta scrapped_data
     if 'pagina' in page_url:
         page_number = page_url.split('pagina')[-1]
-        html_filename = f"data/html_response_pagina{page_number}.html"
+        html_filename = f"scrapped_data/pagina{page_number}.html"
     else:
-        html_filename = "data/html_response_pagina1.html"
+        html_filename = "scrapped_data/pagina1.html"
     
     with open(html_filename, 'w', encoding='utf-8') as f:
         f.write(resp.text)
@@ -120,8 +122,10 @@ def scrape_listings(page_url):
     return listings
 
 def main():
-    base_url = "https://www.fincaraiz.com.co/venta/casas/tunja/boyaca"
     all_listings = []
+    
+    # Asegurar que la carpeta de salida exista
+    os.makedirs('files/csv', exist_ok=True)
     
     # Scrapear 5 páginas para obtener más propiedades
     for page in range(1, 6):
@@ -132,32 +136,33 @@ def main():
             # Páginas adicionales usan el formato /paginaX
             url = f"{base_url}/pagina{page}"
         
-        # print(f"Scrapeando página {page}: {url}...")
+        print(f"Scrapeando página {page}: {url}...")
         try:
             page_listings = scrape_listings(url)
-            all_listings += page_listings
-            # print(f"  -> {len(page_listings)} propiedades encontradas en página {page}")
+            
+            # Guardar cada página en un archivo CSV separado
+            if page_listings:
+                df_page = pd.DataFrame(page_listings)
+                csv_filename = f"files/csv/propiedades_pagina_{page}.csv"
+                df_page.to_csv(csv_filename, index=False, encoding="utf-8")
+                print(f"  -> {len(page_listings)} propiedades guardadas en {csv_filename}")
+                
+                all_listings += page_listings
+                
         except Exception as e:
             print(f"Error scrapeando página {page}: {e}")
         
         # Pausa entre páginas para respetar el servidor
         time.sleep(2)
     
-    # Guardar a CSV
-    df = pd.DataFrame(all_listings)
-    df.to_csv("propiedades.csv", index=False, encoding="utf-8")
-    print(f"\n✅ Total: {len(df)} anuncios guardados en propiedades.csv")
-    
-    # Mostrar resumen de los datos extraídos
-    """
-    if len(df) > 0:
-        print(f"\nResumen de datos extraídos:")
-        print(f"- Precio promedio: ${df['price'].mean():,.0f}")
-        print(f"- Precio mínimo: ${df['price'].min():,.0f}")
-        print(f"- Precio máximo: ${df['price'].max():,.0f}")
-        print(f"- Ubicaciones encontradas: {df['location'].nunique()}")
-        print(f"- Inmobiliarias encontradas: {df['publisher'].nunique()}")
-    """
+    # Guardar todos los datos en un solo archivo CSV
+    if all_listings:
+        df_all = pd.DataFrame(all_listings)
+        output_file = "files/propiedades_todas.csv"
+        df_all.to_csv(output_file, index=False, encoding="utf-8")
+        print(f"\n✅ Total: {len(df_all)} anuncios guardados en {output_file}")
+    else:
+        print("No se encontraron propiedades para guardar.")
 
 if __name__ == "__main__":
     main()
