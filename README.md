@@ -37,7 +37,8 @@ El script extraerá información de las primeras 5 páginas de casas en venta en
 ## Archivos generados
 
 - `propiedades.csv`: Datos de las propiedades en formato CSV
-- `html_response_paginaX.html`: Respuestas HTML guardadas de cada página (para debugging)
+- `data/html_response_paginaX.html`: Respuestas HTML guardadas de cada página (para debugging)
+- `barrios_tunja_completo.csv`: Datos de barrios de Tunja convertidos desde KML
 
 ## Estructura del proyecto
 
@@ -48,5 +49,8 @@ El script extraerá información de las primeras 5 páginas de casas en venta en
 ├── .gitignore              # Archivos a ignorar en Git
 ├── README.md               # Este archivo
 ├── propiedades.csv         # Datos extraídos (generado)
-└── html_response_*.html    # Respuestas HTML (generadas)
+├── barrios_tunja_completo.csv # Datos de barrios convertidos desde KML
+├── kml_to_csv_simple.py    # Conversor de KML a CSV
+└── data/                   # Carpeta de archivos de datos
+    └── html_response_*.html # Respuestas HTML (generadas)
 ```

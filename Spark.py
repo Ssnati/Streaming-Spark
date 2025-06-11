@@ -3,20 +3,25 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 import re
+import os
 
 def scrape_listings(page_url):
     """
     Extrae título, precio y ubicación de las propiedades en una página.
-    Ajusta los selectores CSS según la estructura del sitio real.    """
+    Ajusta los selectores CSS según la estructura del sitio real.
+    """
     resp = requests.get(page_url)
     resp.raise_for_status()
     
-    # Guardar el HTML en un archivo local
+    # Crear carpeta data si no existe
+    os.makedirs('data', exist_ok=True)
+    
+    # Guardar el HTML en un archivo local dentro de la carpeta data
     if 'pagina' in page_url:
         page_number = page_url.split('pagina')[-1]
-        html_filename = f"html_response_pagina{page_number}.html"
+        html_filename = f"data/html_response_pagina{page_number}.html"
     else:
-        html_filename = "html_response_pagina1.html"
+        html_filename = "data/html_response_pagina1.html"
     
     with open(html_filename, 'w', encoding='utf-8') as f:
         f.write(resp.text)

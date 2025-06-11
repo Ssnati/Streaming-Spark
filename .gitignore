@@ -136,6 +136,7 @@ dmypy.json
 
 # HTML response files (project specific)
 html_response_*.html
+data/html_response_*.html
 
 # CSV output files (project specific)
 
