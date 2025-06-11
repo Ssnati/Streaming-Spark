@@ -138,7 +138,6 @@ dmypy.json
 html_response_*.html
 
 # CSV output files (project specific)
-*.csv
 
 # OS generated files
 .DS_Store
