@@ -37,10 +37,41 @@ def scrape_listings(page_url):
             # Limpiar precio: remover $ y puntos/comas
             price_clean = price_text.replace("$", "").replace(".", "").replace(",", "").strip()
             price = float(price_clean) if price_clean.isdigit() else 0
-            
             # Extraer ubicación
             location_elem = card.select_one(".lc-location")
             location = location_elem.get_text(strip=True) if location_elem else "N/A"
+            # Extraer barrio del título
+            neighborhood = "N/A"
+            if title != "N/A":
+                # Patrones para extraer barrio: "en [Barrio]," o "en [Barrio], Tunja"
+                neighborhood_patterns = [
+                    r'Venta\s+en\s+([^,]+),\s*Tunja',  # "Venta en La calleja, Tunja"
+                    r'venta\s+en\s+([^,]+),\s*Tunja',  # "venta en La calleja, Tunja" 
+                    r'en\s+([^,]+),\s*Tunja',          # "en La calleja, Tunja"
+                    r'en\s+([^,]+),',                  # "en Centro,"
+                ]
+                
+                for pattern in neighborhood_patterns:
+                    match = re.search(pattern, title, re.IGNORECASE)
+                    if match:
+                        potential_neighborhood = match.group(1).strip()
+                        
+                        # Filtrar palabras que no son barrios
+                        exclude_words = ['venta', 'tunja', 'casa', 'apartamento']
+                        clean_neighborhood = potential_neighborhood.lower()
+                        
+                        # Verificar que no contenga palabras excluidas
+                        is_valid = True
+                        for exclude_word in exclude_words:
+                            if exclude_word in clean_neighborhood:
+                                is_valid = False
+                                break
+                        
+                        if is_valid and len(potential_neighborhood) > 1:
+                            # Aplicar Pascal case (Primera letra de cada palabra en mayúscula)
+                            neighborhood = potential_neighborhood.title()
+                            break
+            
             # Extraer características (habitaciones, baños, área)
             typology_elem = card.select_one(".lc-typologyTag")
             rooms = bathrooms = area = "N/A"
@@ -61,7 +92,6 @@ def scrape_listings(page_url):
             # Extraer inmobiliaria
             publisher_elem = card.select_one(".publisher strong")
             publisher = publisher_elem.get_text(strip=True) if publisher_elem else "N/A"
-            
             # Extraer URL de la propiedad
             link_elem = card.select_one("a[href*='/casa-en']")
             property_url = "https://www.fincaraiz.com.co" + link_elem['href'] if link_elem else "N/A"
@@ -70,6 +100,7 @@ def scrape_listings(page_url):
                 "title": title,
                 "price": price,
                 "location": location,
+                "neighborhood": neighborhood,
                 "rooms": rooms,
                 "bathrooms": bathrooms,
                 "area_m2": area,
