@@ -2,8 +2,17 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from pyspark.sql.utils import AnalysisException
+from pyspark.sql import functions as F
 import time
 import os
+
+def format_currency(col_name):
+    """Formatea una columna numérica como moneda colombiana."""
+    return F.format_string("$%,.0f", F.col(col_name)).alias(col_name)
+
+def format_float(col_name, decimals=2):
+    """Formatea una columna numérica con separadores de miles y decimales opcionales."""
+    return F.format_string("%,.{}f".format(decimals), F.col(col_name)).alias(col_name)
 
 def create_spark_session():
     """Crea y retorna una sesión de Spark configurada para streaming."""
@@ -52,8 +61,15 @@ def process_batch(df, epoch_id):
             avg("price_per_m2").alias("avg_price_per_m2")
         ).orderBy(desc("property_count"))
         
+        # Mostrar métricas por barrio
         print("\n=== Métricas por Barrio ===")
-        metrics_df.show(truncate=False)
+        metrics_formatted = metrics_df.select(
+            "neighborhood",
+            "property_count",
+            format_currency("avg_price"),
+            format_currency("avg_price_per_m2")
+        )
+        metrics_formatted.show(truncate=False)
         
         # Estadísticas generales
         stats = processed_df.agg(
@@ -64,7 +80,13 @@ def process_batch(df, epoch_id):
         )
         
         print("\n=== Estadísticas Generales ===")
-        stats.show(truncate=False)
+        stats_formatted = stats.select(
+            "total_properties",
+            format_currency("avg_price"),
+            format_float("avg_area_m2", 1),
+            format_currency("avg_price_per_m2")
+        )
+        stats_formatted.show(truncate=False)
         
         # Mostrar tendencias de precios
         print("\n=== Tendencias de Precios ===")
@@ -73,11 +95,23 @@ def process_batch(df, epoch_id):
             max("price").alias("precio_maximo"),
             (max("price") - min("price")).alias("rango_precios")
         )
-        price_trends.show(truncate=False)
+        price_trends_formatted = price_trends.select(
+            format_currency("precio_minimo"),
+            format_currency("precio_maximo"),
+            format_currency("rango_precios")
+        )
+        price_trends_formatted.show(truncate=False)
         
         # Top 5 barrios más caros
         print("\n=== Top 5 Barrios más Caros ===")
-        metrics_df.orderBy(desc("avg_price")).limit(5).show(truncate=False)
+        top_neighborhoods = metrics_df.orderBy(desc("avg_price")).limit(5)
+        top_neighborhoods_formatted = top_neighborhoods.select(
+            "neighborhood",
+            "property_count",
+            format_currency("avg_price"),
+            format_currency("avg_price_per_m2")
+        )
+        top_neighborhoods_formatted.show(truncate=False)
     
     print(f"\nEsperando nuevos datos...")
 
