@@ -60,6 +60,8 @@ pip install -r requirements.txt
 ## 🚀 Uso
 
 ### Paso 1: Extraer Datos (Opcional)
+> **Recuerda que, de ahora en adelante, debes ejecutar los comandos con `sudo` para evitar problemas de permisos y para que los archivos se guarden correctamente.**
+
 Si no tienes archivos CSV, puedes generarlos con el scraper. Los archivos se guardarán en `files/csv/`.
 
 ```bash
@@ -82,6 +84,8 @@ python streaming_analysis_one_by_one.py
 ```bash
 python streaming_analysis_acumulative.py
 ```
+
+> **Tips:** Para ver como se actualiza el stream y la consola, ejecuta en otra terminal el script para scrapear datos con una página más. De esta forma, el análisis en tiempo real detectará los nuevos archivos CSV y mostrará los resultados actualizados.
 
 *Presiona `Ctrl+C` en la terminal para detener el script de análisis.*
 
