@@ -6,48 +6,135 @@ Proyecto completo que demuestra web scraping y procesamiento en tiempo real con 
 
 ### 1. Web Scraping Básico
 - Extracción de propiedades desde Fincaraíz Colombia
-- Paginación automática (5 páginas)
-- Datos guardados en CSV
+- Paginación automática (5 páginas por defecto)
+- Extracción inteligente de barrios conservando artículos (ej: "La Calleja")
+- Datos guardados en CSV con timestamps
 
-### 2. Spark Streaming (⭐ NUEVO)
-- Procesamiento de datos en tiempo real
-- Múltiples análisis simultáneos
-- Generación de datos sintéticos para demo
+### 2. Spark Streaming
+- Procesamiento de datos en tiempo real con Spark 3.4.1
+- Análisis por lotes (batch) y en tiempo real (streaming)
+- Cálculo de métricas de precios por barrio
+- Visualización de tendencias de precios
 
-## 📦 Instalación
+## 🐧 Instalación en Linux
 
-### Opción 1: Dependencias completas
+### 1. Requisitos previos
+
 ```bash
-pip install -r requirements.txt
+# Actualizar el sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar dependencias del sistema
+sudo apt install -y \
+    python3-pip \
+    python3-venv \
+    openjdk-11-jdk \
+    git \
+    libxml2-dev \
+    libxslt1-dev \
+    python3-lxml
+
+# Verificar instalación de Java (requerido para Spark)
+java -version  # Debe mostrar versión 11 o superior
 ```
 
-### Opción 2: Solo dependencias esenciales
+### 2. Configuración del entorno virtual
+
+```bash
+# Crear y activar entorno virtual
+python3 -m venv venv
+source venv/bin/activate
+
+# Actualzar pip
+pip install --upgrade pip
+```
+
+### 3. Instalación de dependencias
+
+#### Opción 1: Dependencias mínimas (recomendado para producción)
 ```bash
 pip install -r requirements-min.txt
 ```
 
-### Opción 3: Solo para Spark Streaming
+#### Opción 2: Todas las dependencias (desarrollo)
 ```bash
-pip install pyspark pandas
+pip install -r requirements.txt
 ```
 
-## 🎯 Uso
+### 4. Configuración de variables de entorno
 
-### 🚀 PUNTO DE ENTRADA PRINCIPAL (RECOMENDADO)
+Crear un archivo `.env` en la raíz del proyecto:
+
 ```bash
-python main.py
+# Configuración de Spark
+SPARK_HOME=venv/lib/python3.10/site-packages/pyspark
+PYSPARK_PYTHON=python3
+PYSPARK_DRIVER_PYTHON=python3
+
+# Configuración de la aplicación
+LOG_LEVEL=INFO
+DATA_DIR=./data
 ```
 
-### Opciones Individuales
+## 🚀 Uso
 
-#### Web Scraping Básico
+### 1. Web Scraping
+
 ```bash
-python scraping/Spark.py
+# Scraping básico (5 páginas)
+python web_scraper.py
+
+# Especificar número de páginas
+python web_scraper.py --pages 3
+
+# Solo primera página
+python web_scraper.py --single
+
+# Usar URL personalizada
+python web_scraper.py --url "https://www.fincaraiz.com.co/venta/casas/otra-ciudad/otro-departamento"
 ```
 
-- `propiedades.csv`: Datos de las propiedades en formato CSV
-- `data/html_response_paginaX.html`: Respuestas HTML guardadas de cada página (para debugging)
-- `barrios_tunja_completo.csv`: Datos de barrios de Tunja convertidos desde KML
+### 2. Análisis por lotes (Batch)
+
+```bash
+# Procesar datos estáticos
+python spark_streaming_analysis.py
+```
+
+### 3. Análisis en tiempo real (Streaming)
+
+```bash
+# Iniciar el procesamiento en tiempo real
+python streaming_analysis.py
+```
+
+## 📊 Estructura de archivos
+
+```
+.
+├── files/
+│   └── csv/                    # Archivos CSV de entrada/salida
+│       └── propiedades_*.csv   # Datos de propiedades
+├── output/                     # Resultados de análisis
+├── scrapped_data/              # HTMLs descargados (debug)
+├── venv/                      # Entorno virtual
+├── .env                       # Variables de entorno
+├── requirements.txt           # Dependencias completas
+├── requirements-min.txt       # Dependencias mínimas
+├── web_scraper.py             # Script de scraping
+├── spark_streaming_analysis.py # Análisis por lotes
+└── streaming_analysis.py      # Análisis en tiempo real
+```
+
+## 📝 Notas
+
+- Los datos se guardan automáticamente en `files/csv/` con timestamps
+- Los análisis generan informes en la carpeta `output/`
+- Se recomienda revisar los logs para depuración
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT.
 
 #### Sistema Completo
 ```bash

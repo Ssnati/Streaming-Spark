@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import os
+from datetime import datetime
 
 # Configuración de Spark
 spark = SparkSession.builder \
@@ -9,58 +10,69 @@ spark = SparkSession.builder \
     .config("spark.sql.shuffle.partitions", "2") \
     .getOrCreate()
 
-# Definir el esquema para los datos de propiedades
-property_schema = StructType([
-    StructField("title", StringType(), True),
-    StructField("price", DoubleType(), True),
-    StructField("location", StringType(), True),
-    StructField("neighborhood", StringType(), True),
-    StructField("rooms", StringType(), True),
-    StructField("bathrooms", StringType(), True),
-    StructField("area_m2", StringType(), True),
-    StructField("publisher", StringType(), True),
-    StructField("url", StringType(), True)
-])
-
-# Cargar datos de barrios (datos estáticos)
-barrios_df = spark.read \
-    .option("header", "true") \
-    .option("inferSchema", "true") \
-    .csv("files/barrios_tunja_completo.csv")
-
-# Limpiar y seleccionar columnas relevantes de barrios
-barrios_df = barrios_df.select(
-    col("nombre").alias("neighborhood"),
-    col("poblacion").cast("int"),
-    col("viviendas").cast("int"),
-    col("area").cast("float").alias("area_hectareas")
-)
-
-def process_properties(df, epoch_id):
-    if df.count() == 0:
-        return
+def load_and_process_data():
+    # Cargar datos de propiedades
+    print("Cargando datos de propiedades...")
+    properties_df = spark.read \
+        .option("header", "true") \
+        .option("inferSchema", "true") \
+        .csv("files/csv/*.csv")
     
     # Procesar datos de propiedades
-    properties_df = df.select(
+    print("Procesando datos de propiedades...")
+    properties_processed = properties_df.select(
         col("title"),
-        col("price"),
+        col("price").cast("float"),
         col("neighborhood"),
         when(col("rooms").rlike(r'^\d+$'), col("rooms").cast("int")).otherwise(None).alias("rooms"),
-        when(col("area_m2").rlike(r'^\d+$'), col("area_m2").cast("int")).otherwise(None).alias("area_m2"),
+        when(col("area_m2").rlike(r'^\d+$'), col("area_m2").cast("float")).otherwise(None).alias("area_m2"),
         col("publisher")
     )
     
+    # Cargar datos de barrios
+    print("Cargando datos de barrios...")
+    barrios_df = spark.read \
+        .option("header", "true") \
+        .option("inferSchema", "true") \
+        .csv("files/barrios_tunja_completo.csv")
+    
+    # Procesar datos de barrios
+    print("Procesando datos de barrios...")
+    barrios_processed = barrios_df.select(
+        lower(col("nombre")).alias("neighborhood"),
+        col("poblacion").cast("int"),
+        col("viviendas").cast("int"),
+        col("area").cast("float").alias("area_hectareas")
+    )
+    
+    return properties_processed, barrios_processed
+
+def analyze_data(properties_df, barrios_df):
     # Filtrar propiedades con barrio conocido
-    properties_with_neighborhood = properties_df.filter(col("neighborhood") != "N/A")
+    print("Filtrando propiedades con barrio conocido...")
+    properties_with_neighborhood = properties_df.filter(
+        (col("neighborhood").isNotNull()) & 
+        (col("neighborhood") != "N/A") &
+        (col("price").isNotNull()) &
+        (col("area_m2").isNotNull())
+    )
+    
+    # Convertir nombre del barrio a minúsculas para hacer match consistente
+    properties_with_neighborhood = properties_with_neighborhood.withColumn(
+        "neighborhood", 
+        lower(col("neighborhood"))
+    )
     
     # Unir con datos de barrios
+    print("Uniendo datos de propiedades con datos de barrios...")
     joined_df = properties_with_neighborhood.join(
         barrios_df, 
-        lower(properties_with_neighborhood["neighborhood"]) == lower(barrios_df["neighborhood"]),
+        "neighborhood",
         "left_outer"
     )
     
     # Calcular métricas
+    print("Calculando métricas...")
     metrics_df = joined_df.groupBy("neighborhood").agg(
         count("*").alias("property_count"),
         avg("price").alias("avg_price"),
@@ -77,7 +89,7 @@ def process_properties(df, epoch_id):
     metrics_df.show(truncate=False)
     
     # Mostrar estadísticas generales
-    stats_df = properties_df.agg(
+    stats_df = properties_with_neighborhood.agg(
         count("*").alias("total_properties"),
         avg("price").alias("avg_price"),
         avg("area_m2").alias("avg_area_m2"),
@@ -86,26 +98,38 @@ def process_properties(df, epoch_id):
     
     print("\n=== Estadísticas Generales ===")
     stats_df.show(truncate=False)
+    
+    return metrics_df
 
-# Configurar el stream de Spark
-streaming_df = spark.readStream \
-    .schema(property_schema) \
-    .option("header", "true") \
-    .option("maxFilesPerTrigger", 1) \
-    .csv("files/csv/*.csv")
+def save_results(df, output_dir="output"):
+    # Crear directorio de salida si no existe
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generar nombre de archivo con timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = os.path.join(output_dir, f"analysis_results_{timestamp}")
+    
+    # Guardar resultados
+    print(f"\nGuardando resultados en {output_path}...")
+    df.coalesce(1).write.mode("overwrite").option("header", "true").csv(output_path)
+    print("Análisis completado y resultados guardados exitosamente!")
 
-# Procesar el stream
-query = streaming_df.writeStream \
-    .foreachBatch(process_properties) \
-    .outputMode("update") \
-    .start()
+def main():
+    try:
+        # Cargar y procesar datos
+        properties_df, barrios_df = load_and_process_data()
+        
+        # Realizar análisis
+        results_df = analyze_data(properties_df, barrios_df)
+        
+        # Guardar resultados
+        save_results(results_df)
+        
+    except Exception as e:
+        print(f"Error durante la ejecución: {str(e)}")
+        raise
+    finally:
+        spark.stop()
 
-print("Iniciando el análisis en tiempo real...")
-print("Presiona Ctrl+C para detener")
-
-try:
-    query.awaitTermination()
-except KeyboardInterrupt:
-    print("\nDeteniendo el análisis...")
-    query.stop()
-    spark.stop()
+if __name__ == "__main__":
+    main()
