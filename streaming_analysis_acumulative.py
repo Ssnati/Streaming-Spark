@@ -17,7 +17,7 @@ def format_float(col_name, decimals=2):
 def create_spark_session():
     """Crea y retorna una sesión de Spark configurada para streaming."""
     return SparkSession.builder \
-        .appName("RealEstateStreamingAnalysis") \
+        .appName("FullAnalysis") \
         .config("spark.sql.shuffle.partitions", "2") \
         .getOrCreate()
 

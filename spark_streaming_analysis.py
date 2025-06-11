@@ -6,7 +6,7 @@ from datetime import datetime
 
 # Configuración de Spark
 spark = SparkSession.builder \
-    .appName("RealEstateAnalysis") \
+    .appName("FileByFileAnalysis") \
     .config("spark.sql.shuffle.partitions", "2") \
     .getOrCreate()
 
