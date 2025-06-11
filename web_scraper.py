@@ -3,20 +3,27 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import time
 import re
+import os
+
+base_url = "https://www.fincaraiz.com.co/venta/casas/tunja/boyaca"
 
 def scrape_listings(page_url):
     """
     Extrae título, precio y ubicación de las propiedades en una página.
-    Ajusta los selectores CSS según la estructura del sitio real.    """
+    Ajusta los selectores CSS según la estructura del sitio real.
+    """
     resp = requests.get(page_url)
     resp.raise_for_status()
     
-    # Guardar el HTML en un archivo local
+    # Crear carpeta scrapped_data si no existe
+    os.makedirs('scrapped_data', exist_ok=True)
+    
+    # Guardar el HTML en un archivo local dentro de la carpeta scrapped_data
     if 'pagina' in page_url:
         page_number = page_url.split('pagina')[-1]
-        html_filename = f"html_response_pagina{page_number}.html"
+        html_filename = f"scrapped_data/pagina{page_number}.html"
     else:
-        html_filename = "html_response_pagina1.html"
+        html_filename = "scrapped_data/pagina1.html"
     
     with open(html_filename, 'w', encoding='utf-8') as f:
         f.write(resp.text)
@@ -37,10 +44,41 @@ def scrape_listings(page_url):
             # Limpiar precio: remover $ y puntos/comas
             price_clean = price_text.replace("$", "").replace(".", "").replace(",", "").strip()
             price = float(price_clean) if price_clean.isdigit() else 0
-            
             # Extraer ubicación
             location_elem = card.select_one(".lc-location")
             location = location_elem.get_text(strip=True) if location_elem else "N/A"
+            # Extraer barrio del título
+            neighborhood = "N/A"
+            if title != "N/A":
+                # Patrones para extraer barrio: "en [Barrio]," o "en [Barrio], Tunja"
+                neighborhood_patterns = [
+                    r'Venta\s+en\s+([^,]+),\s*Tunja',  # "Venta en La calleja, Tunja"
+                    r'venta\s+en\s+([^,]+),\s*Tunja',  # "venta en La calleja, Tunja" 
+                    r'en\s+([^,]+),\s*Tunja',          # "en La calleja, Tunja"
+                    r'en\s+([^,]+),',                  # "en Centro,"
+                ]
+                
+                for pattern in neighborhood_patterns:
+                    match = re.search(pattern, title, re.IGNORECASE)
+                    if match:
+                        potential_neighborhood = match.group(1).strip()
+                        
+                        # Filtrar palabras que no son barrios
+                        exclude_words = ['venta', 'tunja', 'casa', 'apartamento']
+                        clean_neighborhood = potential_neighborhood.lower()
+                        
+                        # Verificar que no contenga palabras excluidas
+                        is_valid = True
+                        for exclude_word in exclude_words:
+                            if exclude_word in clean_neighborhood:
+                                is_valid = False
+                                break
+                        
+                        if is_valid and len(potential_neighborhood) > 1:
+                            # Aplicar Pascal case (Primera letra de cada palabra en mayúscula)
+                            neighborhood = potential_neighborhood.title()
+                            break
+            
             # Extraer características (habitaciones, baños, área)
             typology_elem = card.select_one(".lc-typologyTag")
             rooms = bathrooms = area = "N/A"
@@ -61,7 +99,6 @@ def scrape_listings(page_url):
             # Extraer inmobiliaria
             publisher_elem = card.select_one(".publisher strong")
             publisher = publisher_elem.get_text(strip=True) if publisher_elem else "N/A"
-            
             # Extraer URL de la propiedad
             link_elem = card.select_one("a[href*='/casa-en']")
             property_url = "https://www.fincaraiz.com.co" + link_elem['href'] if link_elem else "N/A"
@@ -70,6 +107,7 @@ def scrape_listings(page_url):
                 "title": title,
                 "price": price,
                 "location": location,
+                "neighborhood": neighborhood,
                 "rooms": rooms,
                 "bathrooms": bathrooms,
                 "area_m2": area,
@@ -84,8 +122,10 @@ def scrape_listings(page_url):
     return listings
 
 def main():
-    base_url = "https://www.fincaraiz.com.co/venta/casas/tunja/boyaca"
     all_listings = []
+    
+    # Asegurar que la carpeta de salida exista
+    os.makedirs('files/csv', exist_ok=True)
     
     # Scrapear 5 páginas para obtener más propiedades
     for page in range(1, 6):
@@ -96,32 +136,33 @@ def main():
             # Páginas adicionales usan el formato /paginaX
             url = f"{base_url}/pagina{page}"
         
-        # print(f"Scrapeando página {page}: {url}...")
+        print(f"Scrapeando página {page}: {url}...")
         try:
             page_listings = scrape_listings(url)
-            all_listings += page_listings
-            # print(f"  -> {len(page_listings)} propiedades encontradas en página {page}")
+            
+            # Guardar cada página en un archivo CSV separado
+            if page_listings:
+                df_page = pd.DataFrame(page_listings)
+                csv_filename = f"files/csv/propiedades_pagina_{page}.csv"
+                df_page.to_csv(csv_filename, index=False, encoding="utf-8")
+                print(f"  -> {len(page_listings)} propiedades guardadas en {csv_filename}")
+                
+                all_listings += page_listings
+                
         except Exception as e:
             print(f"Error scrapeando página {page}: {e}")
         
         # Pausa entre páginas para respetar el servidor
         time.sleep(2)
     
-    # Guardar a CSV
-    df = pd.DataFrame(all_listings)
-    df.to_csv("propiedades.csv", index=False, encoding="utf-8")
-    print(f"\n✅ Total: {len(df)} anuncios guardados en propiedades.csv")
-    
-    # Mostrar resumen de los datos extraídos
-    """
-    if len(df) > 0:
-        print(f"\nResumen de datos extraídos:")
-        print(f"- Precio promedio: ${df['price'].mean():,.0f}")
-        print(f"- Precio mínimo: ${df['price'].min():,.0f}")
-        print(f"- Precio máximo: ${df['price'].max():,.0f}")
-        print(f"- Ubicaciones encontradas: {df['location'].nunique()}")
-        print(f"- Inmobiliarias encontradas: {df['publisher'].nunique()}")
-    """
+    # Guardar todos los datos en un solo archivo CSV
+    if all_listings:
+        df_all = pd.DataFrame(all_listings)
+        output_file = "files/propiedades_todas.csv"
+        df_all.to_csv(output_file, index=False, encoding="utf-8")
+        print(f"\n✅ Total: {len(df_all)} anuncios guardados en {output_file}")
+    else:
+        print("No se encontraron propiedades para guardar.")
 
 if __name__ == "__main__":
     main()

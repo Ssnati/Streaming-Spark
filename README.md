@@ -45,11 +45,9 @@ python main.py
 python scraping/Spark.py
 ```
 
-#### 🔥 Demo Spark Streaming
-```bash
-cd spark
-python spark_streaming_demo.py
-```
+- `propiedades.csv`: Datos de las propiedades en formato CSV
+- `data/html_response_paginaX.html`: Respuestas HTML guardadas de cada página (para debugging)
+- `barrios_tunja_completo.csv`: Datos de barrios de Tunja convertidos desde KML
 
 #### Sistema Completo
 ```bash
@@ -83,30 +81,16 @@ El sistema ejecuta 5 análisis en tiempo real:
 ## 📁 Estructura del Proyecto
 
 ```
-📁 Electiva-4/
-├── 📄 main.py                    # 🎯 PUNTO DE ENTRADA PRINCIPAL
-├── 📄 README.md                  # Documentación completa
-├── 📄 requirements-min.txt       # Dependencias esenciales
-├── 📄 requirements.txt           # Todas las dependencias
-├── 📄 .gitignore                 # Configuración Git
-│
-├── 📁 scraping/                  # Módulos de web scraping
-│   ├── 📄 __init__.py           # Inicialización del módulo
-│   ├── 📄 Spark.py              # Scraper básico de Fincaraíz
-│   └── 📄 detailed_scraper.py   # Scraper detallado individual
-│
-├── 📁 spark/                     # Módulos de Spark Streaming
-│   ├── 📄 __init__.py           # Inicialización del módulo
-│   ├── 📄 spark_streaming_app.py      # Motor de Spark Streaming
-│   ├── 📄 spark_streaming_demo.py     # 🎯 Demo completo
-│   ├── 📄 synthetic_data_generator.py # Generador de datos
-│   └── 📄 streaming_coordinator.py    # Coordinador del sistema
-│
-└── 📁 data/                      # Datos y archivos generados
-    ├── 📄 __init__.py           # Inicialización del módulo
-    ├── 📄 propiedades.csv       # Datos de propiedades
-    ├── 📄 html_response_*.html  # Respuestas HTML guardadas
-    └── 📁 streaming_data/       # Datos para Spark (se crea automáticamente)
+├── Spark.py                 # Script principal de scraping
+├── requirements.txt         # Todas las dependencias del entorno
+├── requirements-min.txt     # Dependencias mínimas del proyecto
+├── .gitignore              # Archivos a ignorar en Git
+├── README.md               # Este archivo
+├── propiedades.csv         # Datos extraídos (generado)
+├── barrios_tunja_completo.csv # Datos de barrios convertidos desde KML
+├── kml_to_csv_simple.py    # Conversor de KML a CSV
+└── data/                   # Carpeta de archivos de datos
+    └── html_response_*.html # Respuestas HTML (generadas)
 ```
 
 ## 🎮 Guía Rápida
