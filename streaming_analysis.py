@@ -85,14 +85,29 @@ def main():
     spark = create_spark_session()
     
     try:
-        # Esquema de los datos de entrada
-        schema = "title STRING, price STRING, neighborhood STRING, rooms STRING, area_m2 STRING, publisher STRING"
-        
-        # Configurar el stream
+            # Configurar el stream
         print("Iniciando el análisis en tiempo real...")
         print(f"Monitoreando la carpeta: {os.path.abspath(input_path)}")
         print("Presiona Ctrl+C para detener\n")
         
+        # Leer el primer archivo CSV para inferir el esquema
+        print("Iniciando inferencia del esquema...")
+        
+        # Leer el directorio completo como un dataset
+        static_df = spark.read \
+            .option("header", "true") \
+            .option("inferSchema", "true") \
+            .csv(input_path) \
+            .limit(1)  # Solo necesitamos una fila para inferir el esquema
+            
+        if static_df.rdd.isEmpty():
+            raise ValueError(f"No se encontraron archivos CSV en {input_path}")
+            
+        # Obtener el esquema inferido
+        schema = static_df.schema
+        print("Esquema inferido exitosamente")
+            
+        # Configurar el stream con el esquema inferido
         streaming_df = spark.readStream \
             .schema(schema) \
             .option("header", "true") \
