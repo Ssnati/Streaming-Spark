@@ -112,6 +112,27 @@ def process_batch(df, epoch_id):
             format_currency("avg_price_per_m2")
         )
         top_neighborhoods_formatted.show(truncate=False)
+
+        # Propiedad más cara y más barata del lote
+        print("\n=== Propiedades Destacadas del Lote ===")
+        min_price = processed_df.agg(min("price")).first()[0]
+        max_price = processed_df.agg(max("price")).first()[0]
+
+        cheapest_property = processed_df.filter(col("price") == min_price).limit(1)
+        expensive_property = processed_df.filter(col("price") == max_price).limit(1)
+
+        extreme_properties = cheapest_property.unionByName(expensive_property)
+
+        display_cols = [
+            col("title"),
+            format_currency("price"),
+            col("neighborhood"),
+            format_float("area_m2", 1).alias("area_m2"),
+            format_currency("price_per_m2"),
+            col("publisher")
+        ]
+        
+        extreme_properties.select(display_cols).show(truncate=False)
     
     print(f"\nEsperando nuevos datos...")
 

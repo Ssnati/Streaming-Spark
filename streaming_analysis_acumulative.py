@@ -135,7 +135,32 @@ def run_full_analysis(batch_df, epoch_id, spark, input_path, schema):
             format_currency("avg_price_per_m2")
         )
         top_neighborhoods_formatted.show(truncate=False)
-    
+
+        # Propiedad más cara y más barata
+        print("\n--- Propiedades Destacadas (Más Cara y Más Barata) ---")
+        # Encontrar el precio mínimo y máximo
+        min_price = processed_df.agg(min("price")).first()[0]
+        max_price = processed_df.agg(max("price")).first()[0]
+
+        # Obtener la propiedad más barata y más cara (tomamos la primera en caso de empate)
+        cheapest_property = processed_df.filter(col("price") == min_price).limit(1)
+        expensive_property = processed_df.filter(col("price") == max_price).limit(1)
+
+        # Unir ambas propiedades en una sola tabla
+        extreme_properties = cheapest_property.unionByName(expensive_property)
+
+        # Seleccionar y formatear las columnas a mostrar
+        display_cols = [
+            col("title"),
+            format_currency("price"),
+            col("neighborhood"),
+            format_float("area_m2", 1).alias("area_m2"),
+            format_currency("price_per_m2"),
+            col("publisher")
+        ]
+        
+        extreme_properties.select(display_cols).show(truncate=False, )
+
     # Liberar el cache
     processed_df.unpersist()
     
