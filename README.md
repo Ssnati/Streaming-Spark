@@ -32,8 +32,9 @@ El proyecto ofrece dos enfoques para el análisis de datos en tiempo real:
 
 ### Requisitos
 - Python 3.7+
-- Java 8 o 11
+- Java 8 o 11 (Requerido)
 - Mínimo 4GB de RAM
+- Sistema Operativo: Linux o macOS
 
 ### Pasos de Instalación
 ```bash
@@ -41,16 +42,18 @@ El proyecto ofrece dos enfoques para el análisis de datos en tiempo real:
 git clone https://github.com/Ssnati/Streaming-Spark.git
 cd Streaming-Spark
 
-# 2. Crear y activar un entorno virtual
+# 2. Verificar la version de Java
+java -version
+# En caso de no ser la requerida, instalar la 11 y cambiarla en el sistema operativo
+sudo apt-get install openjdk-11-jdk
+sudo update-alternatives --config java
+
+# 3. Crear y activar un entorno virtual
 # En Linux/macOS
 python3 -m venv .venv
 source .venv/bin/activate
 
-# En Windows
-python -m venv .venv
-.venv\Scripts\activate
-
-# 3. Instalar las dependencias
+# 4. Instalar las dependencias
 pip install -r requirements.txt
 ```
 
@@ -101,3 +104,12 @@ python streaming_analysis_acumulative.py
 - **Error de `pyspark` no encontrado**: Asegúrate de haber activado el entorno virtual (`source .venv/bin/activate` o `.venv\Scripts\activate`) antes de ejecutar los scripts.
 - **Error de Java**: Verifica que Java 8 o 11 esté instalado y que la variable de entorno `JAVA_HOME` esté configurada correctamente.
 - **Permisos en Linux/macOS**: Si encuentras errores de permisos, asegúrate de que los scripts tengan permisos de ejecución (`chmod +x *.py`).
+- **Error de update de linux**: Si encuentras errores de update de linux, ejecuta el siguiente comando:
+```bash
+sudo apt update
+```
+- **Java no encontrado o version incorrecta**: La version de Java debe ser 8 o 11. Si encuentras errores de Java, ejecuta el siguiente comando:
+```bash
+sudo apt install openjdk-11-jdk
+sudo update-alternatives --config java
+```
