@@ -135,10 +135,13 @@ dmypy.json
 .idea/
 
 # HTML response files (project specific)
-html_response_*.html
+data/html_response_*.html
 
 # CSV output files (project specific)
-*.csv
+data/*.csv
+
+# Streaming data directory
+data/streaming_data/
 
 # OS generated files
 .DS_Store
