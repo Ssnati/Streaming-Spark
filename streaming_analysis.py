@@ -28,13 +28,20 @@ def process_batch(df, epoch_id):
         col("title"),
         col("price").cast("float").alias("price"),
         lower(col("neighborhood")).alias("neighborhood"),
-        when(col("area_m2").rlike(r'^\d+$'), col("area_m2").cast("float")).otherwise(None).alias("area_m2"),
+        when(col("area_m2").rlike(r'^\d+$'), col("area_m2").cast("float"))
+            .otherwise(None)
+            .alias("area_m2"),
         col("publisher")
     ).filter(
         (col("neighborhood").isNotNull()) &
         (col("neighborhood") != "n/a") &
+        (col("neighborhood") != "") &
         (col("price") > 0) &
+        (col("area_m2").isNotNull()) &
         (col("area_m2") > 0)
+    ).withColumn(
+        "price_per_m2",
+        col("price") / col("area_m2")
     )
     
     # Calcular métricas por barrio
@@ -42,7 +49,7 @@ def process_batch(df, epoch_id):
         metrics_df = processed_df.groupBy("neighborhood").agg(
             count("*").alias("property_count"),
             avg("price").alias("avg_price"),
-            avg("price" / col("area_m2")).alias("avg_price_per_m2")
+            avg("price_per_m2").alias("avg_price_per_m2")
         ).orderBy(desc("property_count"))
         
         print("\n=== Métricas por Barrio ===")
@@ -53,7 +60,7 @@ def process_batch(df, epoch_id):
             count("*").alias("total_properties"),
             avg("price").alias("avg_price"),
             avg("area_m2").alias("avg_area_m2"),
-            avg("price" / col("area_m2")).alias("avg_price_per_m2")
+            avg("price_per_m2").alias("avg_price_per_m2")
         )
         
         print("\n=== Estadísticas Generales ===")
