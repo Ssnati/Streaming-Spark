@@ -151,3 +151,6 @@ Thumbs.db
 
 # Windows specific
 desktop.ini
+
+# CSV files
+files/csv2/
