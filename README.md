@@ -21,6 +21,12 @@ El proyecto ofrece dos enfoques para el análisis de datos en tiempo real:
     - Cada vez que se añade un nuevo archivo, vuelve a analizar el **conjunto completo** de datos en la carpeta.
     - Proporciona una visión global y actualizada del mercado con toda la información disponible.
 
+3.  **Análisis "Todo en Uno" (`all_in_one_streaming.py`)**:
+    - Un script avanzado que combina múltiples técnicas de streaming en una sola ejecución:
+    - **Conteo por Ventanas de Tiempo**: Analiza la frecuencia de palabras en los títulos de las propiedades en ventanas de tiempo deslizantes.
+    - **Extracción de Palabras con Números**: Identifica y extrae palabras que contienen dígitos en cualquier campo de texto.
+    - **Unión de Múltiples Flujos**: Combina y procesa datos de dos directorios de entrada (`files/csv` y `files/csv2`) simultáneamente.
+
 #### Métricas Generadas en Cada Análisis:
 - **Métricas por Barrio**: Conteo de propiedades, precio promedio y precio por m².
 - **Estadísticas Generales**: Resumen total de propiedades y promedios generales.
@@ -85,6 +91,11 @@ python streaming_analysis_one_by_one.py
 python streaming_analysis_acumulative.py
 ```
 
+**Opción C: Análisis "Todo en Uno"**
+```bash
+python all_in_one_streaming.py
+```
+
 > **Tips:** Para ver como se actualiza el stream y la consola, ejecuta en otra terminal el script para scrapear datos con una página más. De esta forma, el análisis en tiempo real detectará los nuevos archivos CSV y mostrará los resultados actualizados.
 
 *Presiona `Ctrl+C` en la terminal para detener el script de análisis.*
@@ -99,6 +110,7 @@ python streaming_analysis_acumulative.py
 ├── web_scraper.py            # Script de web scraping
 ├── streaming_analysis_one_by_one.py # Análisis de streaming (archivo por archivo)
 ├── streaming_analysis_acumulative.py  # Análisis de streaming (acumulativo)
+├── all_in_one_streaming.py        # Script con múltiples análisis de streaming
 ├── requirements.txt          # Dependencias del proyecto
 └── README.md                 # Este archivo
 ```
@@ -117,3 +129,8 @@ sudo apt update
 sudo apt install openjdk-11-jdk
 sudo update-alternatives --config java
 ```
+
+## 👥 Créditos
+<center>
+Hecho por Santiago Orjuela, Sebastián Rueda y Zarith Gomez
+</center>
